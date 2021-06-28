@@ -1,8 +1,8 @@
 config = {
   'calibrateOnBoot': False,
   'countdownSec': 6480,
-  'beep': False,
   'network': False,
+  'sound': False,
   'wheels': {
     'a': {
       'offset': 8,

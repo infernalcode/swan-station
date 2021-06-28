@@ -8,12 +8,14 @@ FAILURE = 60
 
 class Counter:
 
-  def __init__(self, timer, critical=CRITICAL, failure=FAILURE):
+  def __init__(self, timer, config, critical=CRITICAL, failure=FAILURE):
+    self.config = config
     self.timer = timer
     self.critical = critical
     self.failure = failure
     self.isCritical = False
 
+    self.enableAudio = config.get("sound", False)
     self.beep_filename =  "swan-beep.wav"
     self.audio = digitalio.DigitalInOut(board.D10)
     self.audio.direction = digitalio.Direction.OUTPUT
@@ -23,11 +25,9 @@ class Counter:
     print("Counter Timer: %s" % (self.timer))
 
     if (self.timer % 2):
-      print("beep")
-      #self.play_beep()
+      if self.enableAudio: self.play_beep()
     elif (self.isCritical):
-      print("beep")
-      #self.play_beep()
+      if self.enableAudio: self.play_beep()
 
     self.timer -= 1
     self.isCritical = self.check_status()

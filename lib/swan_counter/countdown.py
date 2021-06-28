@@ -14,9 +14,9 @@ class Countdown:
     self.__wheelE = wheelE
 
     self.__config = config
-    self.__counter = Counter(self.__config.get("countdownSec", 20))
+    self.__counter = Counter(self.__config.get("countdownSec", 20), config)
 
-    if bool(self.__config.get("calibrateOnBoot", "false")):
+    if self.__config.get("calibrateOnBoot", False):
       self.calibrate()
 
   def calibrate(self):

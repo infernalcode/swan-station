@@ -22,6 +22,7 @@ motor3 = MotorKit(i2c=board.I2C(), address=0x62)
 
 # read settings
 wheelSettings = config.get("wheels")
+initializeNetwork = config.get("network")
 
 # initialize wheels
 WheelA = Wheel("A", motor1.stepper1, AnalogIn(board.A1), wheelSettings.get("a"))
@@ -37,18 +38,19 @@ status_light = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 countdown = Countdown(WheelA, WheelB, WheelC, WheelD, WheelE, config)
 
 # initialize network
-network = Server(secrets)
-network.ifconfig()
+if initializeNetwork:
+  network = Server(secrets)
+  network.ifconfig()
 
-# initialize web console
-webConsole = WebConsole(countdown)
-server.set_interface(network.esp)
+  # initialize web console
+  webConsole = WebConsole(countdown)
+  server.set_interface(network.esp)
 
-#webConsole.on("GET", "/calibrate", calibrate)
-webConsole.on("POST", "/command", webConsole.command)
+  #webConsole.on("GET", "/calibrate", calibrate)
+  webConsole.on("POST", "/command", webConsole.command)
 
-wsgiServer = server.WSGIServer(80, application=webConsole)
-wsgiServer.start()
+  wsgiServer = server.WSGIServer(80, application=webConsole)
+  wsgiServer.start()
 
 # disable light for countdown
 status_light.fill((0, 0, 0))
@@ -57,7 +59,8 @@ countdown.execute()
 
 ## MAIN LOOP
 while True:
-  wsgiServer.update_poll()
+  if initializeNetwork:
+    wsgiServer.update_poll()
   countdown.iterate()
 
   time.sleep(1)
