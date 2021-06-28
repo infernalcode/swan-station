@@ -24,10 +24,10 @@ class Counter:
 
     if (self.timer % 2):
       print("beep")
-      #play_beep()
+      #self.play_beep()
     elif (self.isCritical):
       print("beep")
-      #play_beep()
+      #self.play_beep()
 
     self.timer -= 1
     self.isCritical = self.check_status()

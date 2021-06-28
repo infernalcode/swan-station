@@ -38,10 +38,11 @@ class Wheel:
   stepsPerArc = stepsPerRotation / totalArc   # How many steps to move to the next flap
   stepsPerArc = 20
 
-  def __init__(self, name, stepper, pin):
+  def __init__(self, name, stepper, pin, offset):
     self.name = name
     self.stepper = stepper
     self.pin = pin
+    self.offset = offset
 
     self.counter = RESET_TO
     self.glyph = glyphMap[self.counter]
@@ -59,23 +60,31 @@ class Wheel:
 
   def reset(self):
     while True:
-      if self.at_index(): return
-      self.step(1)
+      if self.at_index():
+        self.step(self.offset)
+        return
+      self.step(4)
+
+  def flip(self):
+    steps = Wheel.stepsPerArc * (len(glyphMap)/2)
+    self.step(steps)
 
   def step(self, times=stepsPerArc):
     for _ in range(times):
       self.stepper.onestep()
 
-  def stepOrAdvance(self):
+  def stepOrAdvance(self, timer, mod=1):
+    if (timer % mod) > 0: return
+
     if (self.counter < self.reset_at):
-      self.step(110)
+      self.flip()
       self.counter = RESET_TO
     else:
       self.step()
       self.counter -= 1
 
     self.glyph = glyphMap[self.counter]
-    print("Wheel %s: Glpyh: %s, Counter: %s, Voltage: %s (atIndex: %s)" % (self.name, self.glyph, self.counter, self._get_voltage(), self.at_index()))
+    print("Wheel %s: Timer: %s, Glpyh: %s, Counter: %s, Voltage: %s (atIndex: %s, +offset: %s)" % (self.name, timer, self.glyph, self.counter, self._get_voltage(), self.at_index(), self.offset))
 
   def get_glyphs(self):
     return cycle(self.map)

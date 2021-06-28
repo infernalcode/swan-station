@@ -2,3 +2,6 @@
 .fseventsd
 .vscode
 boot_out.txt
+secrets.py
+._swan-beep.wav
+**/.*.*py
