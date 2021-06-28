@@ -5,6 +5,8 @@ from .counter import Counter
 class Countdown:
 
   def __init__(self, wheelA, wheelB, wheelC, wheelD, wheelE, config):
+    print(">: INITIALIZING SWAN STATION COUNTDOWN SYSTEM")
+
     self.__wheelA = wheelA
     self.__wheelB = wheelB
     self.__wheelC = wheelC
@@ -17,12 +19,8 @@ class Countdown:
     if bool(self.__config.get("calibrateOnBoot", "false")):
       self.calibrate()
 
-    print(">: BRUN RADZINSKY.BIN")
-    print(">: ", end="")
-
   def calibrate(self):
     print(">: BRUN CALIBRATE.BIN")
-    print(">: ", end="")
 
     calibration = True
     while calibration:
@@ -31,17 +29,25 @@ class Countdown:
 
         if value == "":
             continue
-        elif value == "continue":
+        elif value == "CONTINUE" or value == "C":
           calibration = False
         else:
-          if self.__wheelA.parseCommand(value): print(">: ", end="")
-          elif self.__wheelB.parseCommand(value): print(">: ", end="")
-          elif self.__wheelC.parseCommand(value): print(">: ", end="")
-          elif self.__wheelD.parseCommand(value): print(">: ", end="")
-          elif self.__wheelE.parseCommand(value): print(">: ", end="")
-          else:
-            print("COMMAND NOT FOUND: %s" % (value))
-            print(">: ", end="")
+          result = self.parseCommand(value)
+          print(result)
+          print(">: ", end="")
+
+  def parseCommand(self, command):
+    if self.__wheelA.parseCommand(command): return
+    elif self.__wheelB.parseCommand(command): return
+    elif self.__wheelC.parseCommand(command): return
+    elif self.__wheelD.parseCommand(command): return
+    elif self.__wheelE.parseCommand(command): return
+    else:
+      return "COMMAND NOT FOUND: %s" % (command)
+
+  def execute(self):
+    print(">: BRUN RADZINSKY.BIN")
+    print(">: ", end="")
 
   def iterate(self):
     self.__wheelA.stepOrAdvance(self.__counter.timer, mod=1)

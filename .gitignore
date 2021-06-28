@@ -1,6 +1,7 @@
 .Trashes
 .fseventsd
 .vscode
-.*.*
 boot_out.txt
 secrets.py
+.*.*
+.rsyncignore

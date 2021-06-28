@@ -1,13 +1,16 @@
-from _pixelbuf import wheel
 from adafruit_motorkit import MotorKit
+import adafruit_esp32spi.adafruit_esp32spi_wsgiserver as server
 
-from analogio import AnalogIn
-from swan_counter.wheel import Wheel
-from swan_counter.countdown import Countdown
+from lib.swan_counter.wheel import Wheel
+from lib.swan_counter.countdown import Countdown
+from lib.swan_counter.server import WebConsole, Server
 
 from config import config
+from secrets import secrets
 
+from analogio import AnalogIn
 import board
+import busio
 import math
 import neopixel
 import time
@@ -27,14 +30,34 @@ WheelC = Wheel("C", motor2.stepper1, AnalogIn(board.A3), wheelSettings.get("c"))
 WheelD = Wheel("D", motor2.stepper2, AnalogIn(board.A4), wheelSettings.get("d"))
 WheelE = Wheel("E", motor3.stepper1, AnalogIn(board.A5), wheelSettings.get("e"))
 
-# turn of LED
-pixels = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0)
-pixels.fill((0, 0, 0))
+# initialize LED
+status_light = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 
 ## START MAIN
 countdown = Countdown(WheelA, WheelB, WheelC, WheelD, WheelE, config)
 
+# initialize network
+network = Server(secrets)
+network.ifconfig()
+
+# initialize web console
+webConsole = WebConsole(countdown)
+server.set_interface(network.esp)
+
+#webConsole.on("GET", "/calibrate", calibrate)
+webConsole.on("POST", "/command", webConsole.command)
+
+wsgiServer = server.WSGIServer(80, application=webConsole)
+wsgiServer.start()
+
+# disable light for countdown
+status_light.fill((0, 0, 0))
+
+countdown.execute()
+
+## MAIN LOOP
 while True:
+  wsgiServer.update_poll()
   countdown.iterate()
 
   time.sleep(1)
