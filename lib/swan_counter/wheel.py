@@ -3,6 +3,8 @@ import math
 from adafruit_itertools import cycle
 from micropython import const
 
+from .settings import Settings
+
 ZERO = const(0)
 ONE = const(1)
 TWO = const(2)
@@ -33,16 +35,17 @@ class Wheel:
   # motor details
   stepAngle = 1.8                    # per NEMA 17 datasheet
   stepsPerRotation = 360 / stepAngle # per NEMA 17 datasheet, 200 steps per rotation
+  rotationsPerGear = 2               # smaller gear needs 2 rotations for full rotation on large gear
 
   totalArc = len(glyphMap)
-  stepsPerArc = stepsPerRotation / totalArc   # How many steps to move to the next flap
-  stepsPerArc = 20
+  stepsPerArc = stepsPerRotation / (totalArc / rotationsPerGear) # should be 20
 
-  def __init__(self, name, stepper, pin, offset):
+  def __init__(self, name, stepper, pin, settings):
+
     self.name = name
     self.stepper = stepper
     self.pin = pin
-    self.offset = offset
+    self.settings = Settings.parse(settings)
 
     self.counter = RESET_TO
     self.glyph = glyphMap[self.counter]
@@ -53,7 +56,7 @@ class Wheel:
     return (self.pin.value * 3.3) / 65536
 
   def at_index(self):
-    return self._get_voltage() > 3.0
+    return self._get_voltage() > self.settings.voltageThreshold
 
   def calibrate(self):
     if not self.at_index(): self.reset()
@@ -61,7 +64,7 @@ class Wheel:
   def reset(self):
     while True:
       if self.at_index():
-        self.step(self.offset)
+        self.step(self.settings.offset)
         return
       self.step(4)
 
@@ -69,8 +72,15 @@ class Wheel:
     steps = Wheel.stepsPerArc * (len(glyphMap)/2)
     self.step(steps)
 
+  def full(self):
+    self.step(times=Wheel.stepsPerRotation)
+
+  def offsetStep(self):
+    self.step(times=self.settings.offset)
+
   def step(self, times=stepsPerArc):
     for _ in range(times):
+      print("Wheel %s: photo voltage: %s" % (self.name, self._get_voltage()))
       self.stepper.onestep()
 
   def stepOrAdvance(self, timer, mod=1):
@@ -84,7 +94,29 @@ class Wheel:
       self.counter -= 1
 
     self.glyph = glyphMap[self.counter]
-    print("Wheel %s: Timer: %s, Glpyh: %s, Counter: %s, Voltage: %s (atIndex: %s, +offset: %s)" % (self.name, timer, self.glyph, self.counter, self._get_voltage(), self.at_index(), self.offset))
+    print("Wheel %s: Timer: %s, Glpyh: %s, Counter: %s, Voltage: %s (atIndex: %s, +offset: %s)" % (self.name, timer, self.glyph, self.counter, self._get_voltage(), self.at_index(), self.settings.offset))
 
   def get_glyphs(self):
     return cycle(self.map)
+
+  def parseCommand(self, data):
+    # control commands
+    if data == "R%s" % (self.name.upper()):
+      self.reset()
+      return True
+    elif data == "F%s" % (self.name.upper()):
+      self.flip()
+      return True
+
+    # step commands
+    elif data == "%s" % (self.name.upper()):
+      self.offsetStep()
+      return True
+    elif data == "%s%s" % (self.name.upper(), self.name.upper()):
+      self.full()
+      return True
+    elif data == "%s" % (self.name.lower()):
+      self.step(times=1)
+      return True
+
+    return False
