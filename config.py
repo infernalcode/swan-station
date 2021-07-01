@@ -1,5 +1,5 @@
 config = {
-  'calibrateOnBoot': False,
+  'calibrateOnBoot': True,
   'countdownSec': 6480,
   'network': False,
   'sound': False,

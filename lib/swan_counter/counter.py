@@ -24,10 +24,13 @@ class Counter:
   def iterate(self):
     print("Counter Timer: %s" % (self.timer))
 
-    if (self.timer % 2):
+    if (self.timer < 120):
       if self.enableAudio: self.play_beep()
-    elif (self.isCritical):
-      if self.enableAudio: self.play_beep()
+    else:
+      if (self.timer % 2):
+        if self.enableAudio: self.play_beep()
+      elif (self.isCritical):
+        if self.enableAudio: self.play_beep()
 
     self.timer -= 1
     self.isCritical = self.check_status()

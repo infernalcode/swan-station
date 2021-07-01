@@ -20,7 +20,10 @@ class Countdown:
       self.calibrate()
 
   def calibrate(self):
-    print(">: BRUN CALIBRATE.BIN")
+    print(">: LOAD CALIBRATE.1")
+    print(">: RUN CALIBRATE.1")
+    print("CALIBRATION MODE: PLEASE RESET TO THE BLANK TILE")
+    print(">: ", end="")
 
     calibration = True
     while calibration:
@@ -29,11 +32,11 @@ class Countdown:
 
         if value == "":
             continue
-        elif value == "CONTINUE" or value == "C":
+        elif value.upper() == "SAVE":
           calibration = False
+          # save the offset to storage for future runs
         else:
           result = self.parseCommand(value)
-          print(result)
           print(">: ", end="")
 
   def parseCommand(self, command):
@@ -46,7 +49,8 @@ class Countdown:
       return "COMMAND NOT FOUND: %s" % (command)
 
   def execute(self):
-    print(">: BRUN RADZINSKY.BIN")
+    print(">: LOAD RADZINSKY.1")
+    print(">: RUN RADZINSKY.1")
     print(">: ", end="")
 
   def iterate(self):

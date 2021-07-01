@@ -26,7 +26,7 @@ MAN = const(17)
 BREAD = const(18)
 HAND = const(19)
 
-RESET_AT = ZERO
+RESET_AT = ONE
 RESET_TO = NINE
 
 glyphMap = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, BLANK, CLOTH, SPIRAL, FEATHER, BIRD, STICK, STAPLE, MAN, BREAD, HAND]
@@ -38,7 +38,8 @@ class Wheel:
   rotationsPerGear = 2               # smaller gear needs 2 rotations for full rotation on large gear
 
   totalArc = len(glyphMap)
-  stepsPerArc = stepsPerRotation / (totalArc / rotationsPerGear) # should be 20
+  stepsPerArc = stepsPerRotation / totalArc          # should be 10
+  arcStepsSmallGear = stepsPerArc * rotationsPerGear # should be 20
 
   def __init__(self, name, stepper, pin, settings):
 
@@ -47,7 +48,11 @@ class Wheel:
     self.pin = pin
     self.settings = Settings.parse(settings)
 
-    self.counter = RESET_TO
+    self.offset = self.settings.defaultOffset
+    self.arc = 0
+    self.position = 0
+
+    self.counter = BLANK
     self.glyph = glyphMap[self.counter]
     self.reset_at = RESET_AT
     self.stepper.release()
@@ -59,28 +64,37 @@ class Wheel:
     return self._get_voltage() > self.settings.voltageThreshold
 
   def calibrate(self):
+    self.offset = 0
     if not self.at_index(): self.reset()
+    self.saveCalibration()
+
+  def saveCalibration(self):
+    self.arc = 0
+    self.position = 0
+    self.info()
 
   def reset(self):
     while True:
       if self.at_index():
-        self.step(self.settings.offset)
+        self.step(self.offset)
         return
-      self.step(4)
+      self.step(1)
 
   def flip(self):
-    steps = Wheel.stepsPerArc * (len(glyphMap)/2)
+    steps = Wheel.arcStepsSmallGear * (Wheel.totalArc / 2)
     self.step(steps)
 
   def full(self):
-    self.step(times=Wheel.stepsPerRotation)
+    self.step(times=Wheel.arcStepsSmallGear * Wheel.totalArc)
 
-  def offsetStep(self):
-    self.step(times=self.settings.offset)
+  def arcStep(self):
+    self.arc += 1
+    for _ in range(Wheel.arcStepsSmallGear):
+      self.step(1)
+      self.position += 1
 
-  def step(self, times=stepsPerArc):
+  def step(self, times=arcStepsSmallGear):
     for _ in range(times):
-      print("Wheel %s: photo voltage: %s" % (self.name, self._get_voltage()))
       self.stepper.onestep()
 
   def stepOrAdvance(self, timer, mod=1):
@@ -94,23 +108,38 @@ class Wheel:
       self.counter -= 1
 
     self.glyph = glyphMap[self.counter]
-    print("Wheel %s: Timer: %s, Glpyh: %s, Counter: %s, Voltage: %s (atIndex: %s, +offset: %s)" % (self.name, timer, self.glyph, self.counter, self._get_voltage(), self.at_index(), self.settings.offset))
+    print("Wheel %s: {Position: %s, Arc: %s, Voltage: %s (atIndex: %s)}" % (self.name, self.position, self.arc, self._get_voltage(), self.at_index()))
+
+  def info(self):
+    print("Wheel %s: {Arc: %s, ArcStep: %s, Offset: %s}" % (self.name, self.arc, self.position, self.offset))
 
   def get_glyphs(self):
     return cycle(self.map)
 
   def parseCommand(self, data):
     # control commands
-    if data == "R%s" % (self.name.upper()):
+    if data == "CALIBRATE %s" % (self.name.upper()):
+      self.calibrate()
+      return True
+    elif data == "SAVE %s" % (self.name.upper()):
+      self.saveCalibration()
+      return True
+    elif data == "R%s" % (self.name.upper()):
       self.reset()
+      return True
+    elif data == "FULL %s" % (self.name.upper()):
+      self.full()
       return True
     elif data == "F%s" % (self.name.upper()):
       self.flip()
       return True
+    elif data == "I%s" % (self.name.upper()):
+      self.info()
+      return True
 
     # step commands
     elif data == "%s" % (self.name.upper()):
-      self.offsetStep()
+      self.arcStep()
       return True
     elif data == "%s%s" % (self.name.upper(), self.name.upper()):
       self.full()
