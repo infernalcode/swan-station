@@ -57,6 +57,8 @@ class WebConsole:
     """
     if self._debug:
       self._log_environ(environ)
+      print(self._listeners)
+
 
     self._start_response = start_response
     status = ""
@@ -137,8 +139,8 @@ class WebConsole:
       return "image/png"
     return "text/plain"
 
-  def command(environ):
+  def command(self, environ):
       json = json_module.loads(environ["wsgi.input"].getvalue())
-      #result = self.countdown.parseCommand(json)
-      result = "doing something"
+      print(">: %s" % json.get("command"))
+      result = self.countdown.parseCommand(json.get("command"))
       return ("200 OK", [], result)

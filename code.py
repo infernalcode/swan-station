@@ -25,17 +25,25 @@ wheelSettings = config.get("wheels")
 initializeNetwork = config.get("network")
 
 # initialize wheels
-WheelA = Wheel("A", motor1.stepper1, AnalogIn(board.A1), wheelSettings.get("a"))
-WheelB = Wheel("B", motor1.stepper2, AnalogIn(board.A2), wheelSettings.get("b"))
-WheelC = Wheel("C", motor2.stepper1, AnalogIn(board.A3), wheelSettings.get("c"))
-WheelD = Wheel("D", motor2.stepper2, AnalogIn(board.A4), wheelSettings.get("d"))
-WheelE = Wheel("E", motor3.stepper1, AnalogIn(board.A5), wheelSettings.get("e"))
+wheels = [
+  Wheel("A", motor1.stepper1, board.A1, wheelSettings.get("a"), mod=1),
+  Wheel("B", motor1.stepper2, board.A2, wheelSettings.get("b"), mod=10),
+  Wheel("C", motor2.stepper1, board.A3, wheelSettings.get("c"), mod=60),
+  Wheel("D", motor2.stepper2, board.A4, wheelSettings.get("d"), mod=600),
+  Wheel("E", motor3.stepper1, board.A5, wheelSettings.get("e"), mod=3600)
+]
+
+# WheelA = Wheel("A", motor1.stepper1, board.A1, wheelSettings.get("a"))
+# WheelB = Wheel("B", motor1.stepper2, board.A2, wheelSettings.get("b"))
+# WheelC = Wheel("C", motor2.stepper1, board.A3, wheelSettings.get("c"))
+# WheelD = Wheel("D", motor2.stepper2, board.A4, wheelSettings.get("d"))
+# WheelE = Wheel("E", motor3.stepper1, board.A5, wheelSettings.get("e"))
 
 # initialize LED
 status_light = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 
 ## START MAIN
-countdown = Countdown(WheelA, WheelB, WheelC, WheelD, WheelE, config)
+countdown = Countdown(wheels, config)
 
 # initialize network
 if initializeNetwork:
@@ -61,6 +69,7 @@ countdown.execute()
 while True:
   if initializeNetwork:
     wsgiServer.update_poll()
+
   countdown.iterate()
 
   time.sleep(1)

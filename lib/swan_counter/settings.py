@@ -1,7 +1,7 @@
 class Settings:
 
-  defaultOffset = 8
-  defaultVoltageThreshold = 3.0
+  defaultOffset = 0
+  defaultVoltageThreshold = 2.8
 
   def __init__(self, offset, voltageThreshold):
     self.__offset = offset

@@ -1,4 +1,8 @@
+from lib.adafruit_motor.stepper import FORWARD
 import math
+import re
+
+from analogio import AnalogIn
 
 from adafruit_itertools import cycle
 from micropython import const
@@ -26,10 +30,11 @@ MAN = const(17)
 BREAD = const(18)
 HAND = const(19)
 
-RESET_AT = ONE
-RESET_TO = NINE
+FORWARD = const(1)
+SINGLE = const(1)
 
-glyphMap = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, BLANK, CLOTH, SPIRAL, FEATHER, BIRD, STICK, STAPLE, MAN, BREAD, HAND]
+#GLYPH_MAP = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, BLANK, CLOTH, SPIRAL, FEATHER, BIRD, STICK, STAPLE, MAN, BREAD, HAND]
+GLYPH_MAP = [HAND, BREAD, MAN, STAPLE, STICK, BIRD, FEATHER, SPIRAL, CLOTH, BLANK, NINE, EIGHT, SEVEN, SIX, FIVE, FOUR, THREE, TWO, ONE, ZERO]
 
 class Wheel:
   # motor details
@@ -37,115 +42,157 @@ class Wheel:
   stepsPerRotation = 360 / stepAngle # per NEMA 17 datasheet, 200 steps per rotation
   rotationsPerGear = 2               # smaller gear needs 2 rotations for full rotation on large gear
 
-  totalArc = len(glyphMap)
+  totalArc = len(GLYPH_MAP)
   stepsPerArc = stepsPerRotation / totalArc          # should be 10
   arcStepsSmallGear = stepsPerArc * rotationsPerGear # should be 20
 
-  def __init__(self, name, stepper, pin, settings):
-
+  def __init__(self, name, stepper, pin, settings, mod, startAt=NINE, resetAt=HAND):
     self.name = name
     self.stepper = stepper
     self.pin = pin
     self.settings = Settings.parse(settings)
+    self.mod = mod
+
+    self.startAt = startAt
+    self.resetAt = resetAt
 
     self.offset = self.settings.defaultOffset
-    self.arc = 0
-    self.position = 0
+    self.glyph = self.startAt
 
-    self.counter = BLANK
-    self.glyph = glyphMap[self.counter]
-    self.reset_at = RESET_AT
-    self.stepper.release()
+    self.calibrateStart = BLANK
+    self.counter = self.calibrateStart
 
   def _get_voltage(self):
-    return (self.pin.value * 3.3) / 65536
+    pin = AnalogIn(self.pin)
+    voltage = (pin.value * 3.3) / 65536
+    pin.deinit()
+    return voltage
+
+  def _get_glyph(self):
+    return GLYPH_MAP[self.glyph]
 
   def at_index(self):
     return self._get_voltage() > self.settings.voltageThreshold
 
-  def calibrate(self):
-    self.offset = 0
-    if not self.at_index(): self.reset()
+  def calibrate(self, value):
+    self.counter = value
+    self.glyph = value
     self.saveCalibration()
 
   def saveCalibration(self):
-    self.arc = 0
-    self.position = 0
+    self.offset = 0
     self.info()
 
-  def reset(self):
+  def reset(self, withOffset=True):
     while True:
-      if self.at_index():
-        self.step(self.offset)
-        return
-      self.step(1)
+      if self.at_index(): return
+      self.step()
 
   def flip(self):
-    steps = Wheel.arcStepsSmallGear * (Wheel.totalArc / 2)
-    self.step(steps)
+    self.stepTo(self.startAt)
 
   def full(self):
     self.step(times=Wheel.arcStepsSmallGear * Wheel.totalArc)
 
-  def arcStep(self):
-    self.arc += 1
-    for _ in range(Wheel.arcStepsSmallGear):
-      self.step(1)
-      self.position += 1
+  def glyphStep(self):
+    self.step()
+    nextGlyphIndex = (self.glyph - 1) % Wheel.totalArc
+    self.glyph = nextGlyphIndex
+    self.counter -= 1
 
-  def step(self, times=arcStepsSmallGear):
+  def step(self, times=arcStepsSmallGear, direction=FORWARD, style=SINGLE):
     for _ in range(times):
       self.stepper.onestep()
+    self.stepper.release()
+    self.info()
 
-  def stepOrAdvance(self, timer, mod=1):
-    if (timer % mod) > 0: return
+  def stepOrAdvance(self, timer):
+    if (timer % self.mod) > 0: return
+    if (self.glyph == self.resetAt): self.flip()
 
-    if (self.counter < self.reset_at):
-      self.flip()
-      self.counter = RESET_TO
-    else:
-      self.step()
-      self.counter -= 1
-
-    self.glyph = glyphMap[self.counter]
-    print("Wheel %s: {Position: %s, Arc: %s, Voltage: %s (atIndex: %s)}" % (self.name, self.position, self.arc, self._get_voltage(), self.at_index()))
+    self.glyphStep()
 
   def info(self):
-    print("Wheel %s: {Arc: %s, ArcStep: %s, Offset: %s}" % (self.name, self.arc, self.position, self.offset))
+    print("Wheel %s: {Glyph: %s, Voltage: %s, AtIndex: %s}" % (self.name, self.glyph, self._get_voltage(), self.at_index()))
 
   def get_glyphs(self):
-    return cycle(self.map)
+    return cycle(GLYPH_MAP)
+
+  def distanceTo(self, glyph):
+    glyphs = cycle(GLYPH_MAP)
+    if self.glyph == glyph: return 0
+    distance = 1
+    while self.glyph != next(glyphs): continue
+    while glyph != next(glyphs): distance += 1
+    return distance
+
+  def stepTo(self, glyph):
+    distance = self.distanceTo(glyph)
+    self.step(times=distance * Wheel.arcStepsSmallGear)
+    self.glyph = glyph
 
   def parseCommand(self, data):
     # control commands
-    if data == "CALIBRATE %s" % (self.name.upper()):
-      self.calibrate()
-      return True
+    if re.match(r"^CALIBRATE %s (\d+)" % (self.name.upper()), data):
+      cmd = re.compile(r"^CALIBRATE %s (\d+)" % (self.name.upper()))
+      result = cmd.search(data)
+      self.calibrate(value=int(result.group(1)))
+
+      return True, "CALIBRATING %s to value %s" % (self.name.upper(), result.group(1))
+
     elif data == "SAVE %s" % (self.name.upper()):
       self.saveCalibration()
-      return True
-    elif data == "R%s" % (self.name.upper()):
+
+      return True, "CALIBRATION SAVED FOR WHEEL %s" % (self.name.upper())
+
+    elif data == "RESET %s" % (self.name.upper()):
       self.reset()
-      return True
-    elif data == "FULL %s" % (self.name.upper()):
-      self.full()
-      return True
+
+      return True, "RESETTING %s" % (self.name.upper())
+
+    elif re.match(r"^SET %s (\d+)" % (self.name.upper()), data):
+      cmd = re.compile(r"^SET %s (\d+)" % (self.name.upper()))
+      result = cmd.search(data)
+      self.stepTo(glyph=int(result.group(1)))
+
+      return True, "SETTING %s (CURRENT GLYPH: %s) TO GLYPH %s" % (self.name.upper(), self.glyph, result.group(1))
+
+    elif re.match(r"^D%s (\d+)" % (self.name.upper()), data):
+      cmd = re.compile(r"^D%s (\d+)" % (self.name.upper()))
+      result = cmd.search(data)
+      distance = self.distanceTo(glyph=int(result.group(1)))
+
+      return True, "WHEEL %s: DISTANCE FROM CURRENT %s TO %s => %s" % (self.name.upper(), self.glyph, result.group(1), distance)
+
     elif data == "F%s" % (self.name.upper()):
       self.flip()
-      return True
+
+      return True, "FLIPPING %s" % (self.name.upper())
+
     elif data == "I%s" % (self.name.upper()):
-      self.info()
-      return True
+      return True, self.info()
 
     # step commands
+    elif re.match(r"^R%s (\d+)" % (self.name.upper()), data):
+      cmd = re.compile(r"^R%s (\d+)" % (self.name.upper()))
+      result = cmd.search(data)
+      self.step(times=int(result.group(1)))
+
+      return True, "STEPPING %s %s TIMES" % (self.name.upper(), result.group(1))
+
     elif data == "%s" % (self.name.upper()):
-      self.arcStep()
-      return True
+      self.glyphStep()
+
+      return True, "GLYPH STEP FOR WHEEL %s" % (self.name.upper())
+
     elif data == "%s%s" % (self.name.upper(), self.name.upper()):
       self.full()
-      return True
+
+      return True, "ROTATING %s FULL" % (self.name.upper())
+
     elif data == "%s" % (self.name.lower()):
       self.step(times=1)
-      return True
 
-    return False
+      return True, "SINGLE STEP %s" % (self.name.upper())
+
+    return False, "INVALID COMMAND"

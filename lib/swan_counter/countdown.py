@@ -1,20 +1,22 @@
 import supervisor
+import time
+
+from analogio import AnalogIn
+import board
 
 from .counter import Counter
 
+DEFAULT_COUNTDOWN_TIME = 6480
+
 class Countdown:
 
-  def __init__(self, wheelA, wheelB, wheelC, wheelD, wheelE, config):
+  def __init__(self, wheels, config):
     print(">: INITIALIZING SWAN STATION COUNTDOWN SYSTEM")
 
-    self.__wheelA = wheelA
-    self.__wheelB = wheelB
-    self.__wheelC = wheelC
-    self.__wheelD = wheelD
-    self.__wheelE = wheelE
-
+    self.__wheels = wheels
     self.__config = config
-    self.__counter = Counter(self.__config.get("countdownSec", 20), config)
+    self.__counter = Counter(self.__config.get("countdownSec", DEFAULT_COUNTDOWN_TIME), config)
+    self.__engageFlaps = self.__config.get("flaps", True)
 
     if self.__config.get("calibrateOnBoot", False):
       self.calibrate()
@@ -22,42 +24,72 @@ class Countdown:
   def calibrate(self):
     print(">: LOAD CALIBRATE.1")
     print(">: RUN CALIBRATE.1")
-    print("CALIBRATION MODE: PLEASE RESET TO THE BLANK TILE")
     print(">: ", end="")
 
     calibration = True
     while calibration:
       if supervisor.runtime.serial_bytes_available:
         value = input().strip()
+        command = value.upper()
 
         if value == "":
             continue
-        elif value.upper() == "SAVE":
+        elif command == "STATUS":
+          self.status()
+          self.prompt()
+
+        elif command == "WATCH":
+          while True:
+            self.status()
+            time.sleep(1)
+
+        elif command == "PINS":
+          while True:
+            self.monitorPins()
+            time.sleep(1)
+
+        elif command == "SAVE":
           calibration = False
           # save the offset to storage for future runs
         else:
           result = self.parseCommand(value)
-          print(">: ", end="")
+          self.prompt()
 
   def parseCommand(self, command):
-    if self.__wheelA.parseCommand(command): return
-    elif self.__wheelB.parseCommand(command): return
-    elif self.__wheelC.parseCommand(command): return
-    elif self.__wheelD.parseCommand(command): return
-    elif self.__wheelE.parseCommand(command): return
-    else:
-      return "COMMAND NOT FOUND: %s" % (command)
+    for wheel in self.__wheels:
+      result, output = wheel.parseCommand(command)
+
+      if result:
+        return output
+
+    return "COMMAND NOT FOUND: %s" % (command)
+
+  def status(self):
+    for wheel in self.__wheels:
+      wheel.info()
+    print(" ")
+
+  def prompt(self):
+    print(">: ", end="")
 
   def execute(self):
     print(">: LOAD RADZINSKY.1")
     print(">: RUN RADZINSKY.1")
     print(">: ", end="")
 
+  def monitorPins(self):
+    # debug code
+    pins = [board.A1, board.A2, board.A3, board.A4, board.A5]
+
+    for pin in pins:
+      p = AnalogIn(pin)
+      print("%s: %f" % (pin, p.value))
+      p.deinit()
+    print(" ")
+
   def iterate(self):
-    self.__wheelA.stepOrAdvance(self.__counter.timer, mod=1)
-    self.__wheelB.stepOrAdvance(self.__counter.timer, mod=10)
-    self.__wheelC.stepOrAdvance(self.__counter.timer, mod=60)
-    self.__wheelD.stepOrAdvance(self.__counter.timer, mod=600)
-    self.__wheelE.stepOrAdvance(self.__counter.timer, mod=3600)
+    if self.__engageFlaps:
+      for wheel in self.__wheels:
+        wheel.stepOrAdvance(self.__counter.timer)
 
     self.__counter.iterate()
