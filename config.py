@@ -1,10 +1,10 @@
 config = {
-  'calibrateOnBoot': False,
-  'countdownSec': 6480,
-  'network': True,
+  'calibrateOnBoot': True,
+  # 'countdownSec': 6480,
+  'countdownSec': 2,
+  'network': False,
   'sound': False,
-  'flaps': True,
-  'timerOutput': False,
+  'timerOutput': True,
   'wheels': {
     'a': {
       'offset': 0,

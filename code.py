@@ -33,12 +33,6 @@ wheels = [
   Wheel("E", motor3.stepper1, board.A5, wheelSettings.get("e"), mod=3600)
 ]
 
-# WheelA = Wheel("A", motor1.stepper1, board.A1, wheelSettings.get("a"))
-# WheelB = Wheel("B", motor1.stepper2, board.A2, wheelSettings.get("b"))
-# WheelC = Wheel("C", motor2.stepper1, board.A3, wheelSettings.get("c"))
-# WheelD = Wheel("D", motor2.stepper2, board.A4, wheelSettings.get("d"))
-# WheelE = Wheel("E", motor3.stepper1, board.A5, wheelSettings.get("e"))
-
 # initialize LED
 status_light = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 
@@ -46,6 +40,8 @@ status_light = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 countdown = Countdown(wheels, config)
 
 # initialize network
+wsgiServer = None
+
 if initializeNetwork:
   network = Server(secrets)
   network.ifconfig()
@@ -63,7 +59,7 @@ if initializeNetwork:
 # disable light for countdown
 status_light.fill((0, 0, 0))
 
-countdown.execute()
+countdown.execute(wsgiServer)
 
 ## MAIN LOOP
 while True:

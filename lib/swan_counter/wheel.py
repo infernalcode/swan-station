@@ -68,6 +68,9 @@ class Wheel:
     pin.deinit()
     return voltage
 
+  def getName(self):
+    return self.name.upper()
+
   def _get_glyph(self):
     return GLYPH_MAP[self.glyph]
 
@@ -113,7 +116,10 @@ class Wheel:
     self.glyphStep()
 
   def info(self):
-    print("Wheel %s: {Glyph: %s, Voltage: %s, AtIndex: %s}" % (self.name, self.glyph, self._get_voltage(), self.at_index()))
+    info = "Wheel %s: {Glyph: %s, Voltage: %s, AtIndex: %s}" % (self.name, self.glyph, self._get_voltage(), self.at_index())
+    print(info)
+
+    return info
 
   def get_glyphs(self):
     return cycle(GLYPH_MAP)
@@ -127,72 +133,73 @@ class Wheel:
     return distance
 
   def stepTo(self, glyph):
+    print("Setting %s to %s" % (self.getName(), glyph))
     distance = self.distanceTo(glyph)
     self.step(times=distance * Wheel.arcStepsSmallGear)
     self.glyph = glyph
 
   def parseCommand(self, data):
     # control commands
-    if re.match(r"^CALIBRATE %s (\d+)" % (self.name.upper()), data):
-      cmd = re.compile(r"^CALIBRATE %s (\d+)" % (self.name.upper()))
+    if re.match(r"^CALIBRATE %s (\d+)" % (self.getName()), data):
+      cmd = re.compile(r"^CALIBRATE %s (\d+)" % (self.getName()))
       result = cmd.search(data)
       self.calibrate(value=int(result.group(1)))
 
-      return True, "CALIBRATING %s to value %s" % (self.name.upper(), result.group(1))
+      return True, "CALIBRATING %s to value %s" % (self.getName(), result.group(1))
 
-    elif data == "SAVE %s" % (self.name.upper()):
+    elif data == "SAVE %s" % (self.getName()):
       self.saveCalibration()
 
-      return True, "CALIBRATION SAVED FOR WHEEL %s" % (self.name.upper())
+      return True, "CALIBRATION SAVED FOR WHEEL %s" % (self.getName())
 
-    elif data == "RESET %s" % (self.name.upper()):
+    elif data == "RESET %s" % (self.getName()):
       self.reset()
 
-      return True, "RESETTING %s" % (self.name.upper())
+      return True, "RESETTING %s" % (self.getName())
 
-    elif re.match(r"^SET %s (\d+)" % (self.name.upper()), data):
-      cmd = re.compile(r"^SET %s (\d+)" % (self.name.upper()))
+    elif re.match(r"^SET %s (\d+)" % (self.getName()), data):
+      cmd = re.compile(r"^SET %s (\d+)" % (self.getName()))
       result = cmd.search(data)
       self.stepTo(glyph=int(result.group(1)))
 
-      return True, "SETTING %s (CURRENT GLYPH: %s) TO GLYPH %s" % (self.name.upper(), self.glyph, result.group(1))
+      return True, "SETTING %s (CURRENT GLYPH: %s) TO GLYPH %s" % (self.getName(), self.glyph, result.group(1))
 
-    elif re.match(r"^D%s (\d+)" % (self.name.upper()), data):
-      cmd = re.compile(r"^D%s (\d+)" % (self.name.upper()))
+    elif re.match(r"^D%s (\d+)" % (self.getName()), data):
+      cmd = re.compile(r"^D%s (\d+)" % (self.getName()))
       result = cmd.search(data)
       distance = self.distanceTo(glyph=int(result.group(1)))
 
-      return True, "WHEEL %s: DISTANCE FROM CURRENT %s TO %s => %s" % (self.name.upper(), self.glyph, result.group(1), distance)
+      return True, "WHEEL %s: DISTANCE FROM CURRENT %s TO %s => %s" % (self.getName(), self.glyph, result.group(1), distance)
 
-    elif data == "F%s" % (self.name.upper()):
+    elif data == "F%s" % (self.getName()):
       self.flip()
 
-      return True, "FLIPPING %s" % (self.name.upper())
+      return True, "FLIPPING %s" % (self.getName())
 
-    elif data == "I%s" % (self.name.upper()):
+    elif data == "I%s" % (self.getName()):
       return True, self.info()
 
     # step commands
-    elif re.match(r"^R%s (\d+)" % (self.name.upper()), data):
-      cmd = re.compile(r"^R%s (\d+)" % (self.name.upper()))
+    elif re.match(r"^R%s (\d+)" % (self.getName()), data):
+      cmd = re.compile(r"^R%s (\d+)" % (self.getName()))
       result = cmd.search(data)
       self.step(times=int(result.group(1)))
 
-      return True, "STEPPING %s %s TIMES" % (self.name.upper(), result.group(1))
+      return True, "STEPPING %s %s TIMES" % (self.getName(), result.group(1))
 
-    elif data == "%s" % (self.name.upper()):
+    elif data == "%s" % (self.getName()):
       self.glyphStep()
 
-      return True, "GLYPH STEP FOR WHEEL %s" % (self.name.upper())
+      return True, "GLYPH STEP FOR WHEEL %s" % (self.getName())
 
-    elif data == "%s%s" % (self.name.upper(), self.name.upper()):
+    elif data == "%s%s" % (self.getName(), self.getName()):
       self.full()
 
-      return True, "ROTATING %s FULL" % (self.name.upper())
+      return True, "ROTATING %s FULL" % (self.getName())
 
     elif data == "%s" % (self.name.lower()):
       self.step(times=1)
 
-      return True, "SINGLE STEP %s" % (self.name.upper())
+      return True, "SINGLE STEP %s" % (self.getName())
 
     return False, "INVALID COMMAND"
