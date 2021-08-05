@@ -80,7 +80,18 @@ class Countdown:
         elif re.match(r"^SET (\d)(\d)(\d):(\d)(\d)", command):
           cmd = re.compile(r"^SET (\d)(\d)(\d):(\d)(\d)")
           result = cmd.search(command)
-          self.setTimer(result.group(5), result.group(4), result.group(3), result.group(2), result.group(1))
+          self.setWheels(result.group(5), result.group(4), result.group(3), result.group(2), result.group(1))
+
+        elif re.match(r"^CAL (\d+):(\d+):(\d+):(\d+):(\d+)", command):
+          cmd = re.compile(r"^CAL (\d+):(\d+):(\d+):(\d+):(\d+)")
+          result = cmd.search(command)
+          self.__wheels[0].parseCommand("CALIBRATE A %s" % result.group(5))
+          self.__wheels[1].parseCommand("CALIBRATE B %s" % result.group(4))
+          self.__wheels[2].parseCommand("CALIBRATE C %s" % result.group(3))
+          self.__wheels[3].parseCommand("CALIBRATE D %s" % result.group(2))
+          self.__wheels[4].parseCommand("CALIBRATE E %s" % result.group(1))
+          self.reset()
+          self.prompt()
 
         else:
           result = self.parseCommand(value)
@@ -132,7 +143,7 @@ class Countdown:
       p.deinit()
     print(" ")
 
-  def setTimer(self, secondDigit, tenSecondDigit, minuteDigit, tenMinuteDigit, hundredMinuteDigit):
+  def setWheels(self, secondDigit, tenSecondDigit, minuteDigit, tenMinuteDigit, hundredMinuteDigit):
     self.__wheels[0].stepTo(int(secondDigit))
     self.__wheels[1].stepTo(int(tenSecondDigit))
     self.__wheels[2].stepTo(int(minuteDigit))
@@ -140,22 +151,22 @@ class Countdown:
     self.__wheels[4].stepTo(int(hundredMinuteDigit))
 
   def underworld(self):
-    self.setTimer(STICK, BIRD, FEATHER, SPIRAL, CLOTH)
+    self.setWheels(STICK, BIRD, FEATHER, SPIRAL, CLOTH)
 
   def reset(self):
-    self.setTimer(BLANK, BLANK, BLANK, BLANK, BLANK)
+    self.setWheels(BLANK, BLANK, BLANK, BLANK, BLANK)
 
-  def iterate(self):
-
-    self.__counter.iterate()
-
+  def setTimer(self):
     if (self.__counter.getSeconds() > 0):
       digitsMinutes, digitsSeconds = self.__counter.getDigits()
-      self.setTimer(digitsSeconds[1], digitsSeconds[0], digitsMinutes[2], digitsMinutes[1], digitsMinutes[0])
+      self.setWheels(digitsSeconds[1], digitsSeconds[0], digitsMinutes[2], digitsMinutes[1], digitsMinutes[0])
     else:
       if (self.__counter.getSeconds() > -10):
-        self.setTimer(randrange(CLOTH, HAND), randrange(CLOTH, HAND), randrange(CLOTH, HAND), randrange(CLOTH, HAND), randrange(CLOTH, HAND))
+        self.setWheels(randrange(CLOTH, HAND), randrange(CLOTH, HAND), randrange(CLOTH, HAND), randrange(CLOTH, HAND), randrange(CLOTH, HAND))
       else:
         self.underworld()
 
+  def iterate(self):
+    self.__counter.iterate()
+    self.setTimer()
     self.__counter.decrement()

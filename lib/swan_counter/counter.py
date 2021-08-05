@@ -35,10 +35,9 @@ class Counter:
     self.audio.direction = digitalio.Direction.OUTPUT
     self.audio.value = True
 
-  def iterate(self):
+  def iterate(self, func):
     if self.enableOutput: print("TIMER: %s" % (self.timer))
-
-    self.evaluate_status()
+    self.evaluate_status(func)
 
 # At the 4 minute mark, a steady alarm beep signal/ed and continued for the next 3 minutes.
 # At the 1-minute mark, an intense alarm signalled and continued for the next 50 seconds.
@@ -55,15 +54,15 @@ class Counter:
       return False
 
     if self.timer <= self.failure:
-      self.playSound("alarm")
+      self.playSound("alarm-double")
       print("SYSTEM CRITICAL")
 
     elif self.timer <= self.critical:
-      self.playSound("beep")
+      if (self.timer % 2): self.playSound("alarm")
       print("SYSTEM WARNING")
 
     elif self.timer <= self.warning:
-      if (self.timer % 2): self.playSound("beep")
+      if (self.timer % 4): self.playSound("beep")
 
     return True
 
@@ -90,14 +89,14 @@ class Counter:
     digitsMinutes = list(str(minutes))
     digitsSeconds = list(str(seconds))
 
-    # pad the display with blank values when it makes sense
+    # pad the display with zero values when it makes sense
     if (len(digitsMinutes) == 1):
       digitsMinutes = [ZERO, ZERO, digitsMinutes.pop()]
 
     if (len(digitsMinutes) == 2):
-      digitsMinutes = [BLANK, digitsMinutes.pop(), digitsMinutes.pop()]
+      digitsMinutes = [ZERO, digitsMinutes.pop(), digitsMinutes.pop()]
 
     if (len(digitsSeconds) == 1):
-      digitsSeconds = [BLANK, digitsSeconds.pop()]
+      digitsSeconds = [ZERO, digitsSeconds.pop()]
 
     return digitsMinutes, digitsSeconds

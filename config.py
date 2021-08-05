@@ -1,7 +1,6 @@
 config = {
   'calibrateOnBoot': True,
-  # 'countdownSec': 6480,
-  'countdownSec': 2,
+  'countdownSec': 6480,
   'network': False,
   'sound': True,
   'timerOutput': True,
