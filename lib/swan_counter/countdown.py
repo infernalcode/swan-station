@@ -4,6 +4,11 @@ import re
 import time
 
 from analogio import AnalogIn
+import audioio
+import audiomp3
+import digitalio
+import audiocore
+
 import board
 
 from .counter import Counter
@@ -59,6 +64,18 @@ class Countdown:
           while True:
             self.monitorPins()
             time.sleep(1)
+
+        elif command == "FAILURE":
+          self.__counter.playSound("failure")
+          self.prompt()
+
+        elif command == "LOCKDOWN":
+          self.__counter.playSound("lockdown")
+          self.prompt()
+
+        elif command == "BEEP":
+          self.__counter.playSound("beep")
+          self.prompt()
 
         elif re.match(r"^SET (\d)(\d)(\d):(\d)(\d)", command):
           cmd = re.compile(r"^SET (\d)(\d)(\d):(\d)(\d)")

@@ -1,5 +1,5 @@
-import audiocore
 import audioio
+import audiomp3
 import board
 import digitalio
 
@@ -22,10 +22,14 @@ class Counter:
     self.enableOutput = config.get("timerOutput", False)
 
     self.audioLibrary = {
-      "beep": open("swan-beep.wav", "rb"),
-      "alarm": open("swan-alarm.wav", "rb"),
-      "failure": open("swan-system-failure.wav", "rb")
+      "alarm": open("swan-alarm.mp3", "rb"),
+      "alarm-double": open("swan-alarm-double.mp3", "rb"),
+      "beep": open("swan-beep.mp3", "rb"),
+      "lockdown": open("swan-lockdown.mp3", "rb"),
+      "failure": open("swan-system-failure.mp3", "rb")
     }
+
+    self.mp3Decoder = audiomp3.MP3Decoder(self.audioLibrary["beep"])
 
     self.audio = digitalio.DigitalInOut(board.D10)
     self.audio.direction = digitalio.Direction.OUTPUT
@@ -46,29 +50,33 @@ class Counter:
 
   def evaluate_status(self):
     if self.timer <= 0:
-      self.playSound(self.audioLibrary["failure"])
+      self.playSound("failure")
       for _ in range(20): print("SYSTEM FAILURE ", end="")
       return False
 
     if self.timer <= self.failure:
-      self.playSound(self.audioLibrary["alarm"])
+      self.playSound("alarm")
       print("SYSTEM CRITICAL")
 
     elif self.timer <= self.critical:
-      self.playSound(self.audioLibrary["beep"])
+      self.playSound("beep")
       print("SYSTEM WARNING")
 
     elif self.timer <= self.warning:
-      if (self.timer % 2): self.playSound(self.audioLibrary["beep"])
+      if (self.timer % 2): self.playSound("beep")
 
     return True
 
-  def playSound(self, filename):
+  def playSound(self, filename, func=lambda: {}):
     if (self.enableAudio):
-        with audioio.AudioOut(board.A0) as audio:
-          audio.play(audiocore.WaveFile(filename))
-          while audio.playing:
-            pass
+      file = self.audioLibrary[filename]
+      with audioio.AudioOut(board.A0) as audio:
+        self.mp3Decoder.file = file
+        audio.play(self.mp3Decoder)
+
+        while audio.playing:
+          func
+          pass
 
   def decrement(self):
     self.timer -= 1
@@ -84,18 +92,12 @@ class Counter:
 
     # pad the display with blank values when it makes sense
     if (len(digitsMinutes) == 1):
-      if (digitsMinutes[0] == str(ZERO)):
-        digitsMinutes = [BLANK, BLANK, BLANK]
-      else:
-        digitsMinutes = [BLANK, BLANK, digitsMinutes.pop()]
+      digitsMinutes = [ZERO, ZERO, digitsMinutes.pop()]
 
     if (len(digitsMinutes) == 2):
       digitsMinutes = [BLANK, digitsMinutes.pop(), digitsMinutes.pop()]
 
     if (len(digitsSeconds) == 1):
-      if (digitsSeconds[0] == str(ZERO)):
-        digitsSeconds = [BLANK, BLANK]
-      else:
-        digitsSeconds = [BLANK, digitsSeconds.pop()]
+      digitsSeconds = [BLANK, digitsSeconds.pop()]
 
     return digitsMinutes, digitsSeconds

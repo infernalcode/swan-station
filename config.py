@@ -3,7 +3,7 @@ config = {
   # 'countdownSec': 6480,
   'countdownSec': 2,
   'network': False,
-  'sound': False,
+  'sound': True,
   'timerOutput': True,
   'wheels': {
     'a': {
