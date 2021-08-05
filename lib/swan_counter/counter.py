@@ -22,11 +22,11 @@ class Counter:
     self.enableOutput = config.get("timerOutput", False)
 
     self.audioLibrary = {
-      "alarm": open("swan-alarm.mp3", "rb"),
-      "alarm-double": open("swan-alarm-double.mp3", "rb"),
-      "beep": open("swan-beep.mp3", "rb"),
-      "lockdown": open("swan-lockdown.mp3", "rb"),
-      "failure": open("swan-system-failure.mp3", "rb")
+      "alarm": open("audio/swan-alarm.mp3", "rb"),
+      "alarm-double": open("audio/swan-alarm-double.mp3", "rb"),
+      "beep": open("audio/swan-beep.mp3", "rb"),
+      "lockdown": open("audio/swan-lockdown.mp3", "rb"),
+      "failure": open("audio/swan-system-failure.mp3", "rb")
     }
 
     self.mp3Decoder = audiomp3.MP3Decoder(self.audioLibrary["beep"])
