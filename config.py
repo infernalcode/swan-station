@@ -1,8 +1,9 @@
 config = {
   'calibrateOnBoot': True,
   'countdownSec': 6480,
-  'network': False,
+  'network': True,
   'sound': True,
+  'debug': False,
   'timerOutput': True,
   'wheels': {
     'a': {

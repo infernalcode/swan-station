@@ -2,6 +2,7 @@ from adafruit_motorkit import MotorKit
 import adafruit_esp32spi.adafruit_esp32spi_wsgiserver as server
 
 from lib.swan_counter.wheel import Wheel
+from lib.swan_counter.counter import Counter
 from lib.swan_counter.countdown import Countdown
 from lib.swan_counter.server import WebConsole, Server
 
@@ -10,8 +11,6 @@ from secrets import secrets
 
 from analogio import AnalogIn
 import board
-import busio
-import math
 import neopixel
 import time
 
@@ -26,18 +25,21 @@ initializeNetwork = config.get("network")
 
 # initialize wheels
 wheels = [
-  Wheel("A", motor1.stepper1, board.A1, wheelSettings.get("a"), mod=1),
-  Wheel("B", motor1.stepper2, board.A2, wheelSettings.get("b"), mod=10),
-  Wheel("C", motor2.stepper1, board.A3, wheelSettings.get("c"), mod=60),
-  Wheel("D", motor2.stepper2, board.A4, wheelSettings.get("d"), mod=600),
-  Wheel("E", motor3.stepper1, board.A5, wheelSettings.get("e"), mod=3600)
+  Wheel("A", motor1.stepper1, board.A1, wheelSettings.get("a"), config),
+  Wheel("B", motor1.stepper2, board.A2, wheelSettings.get("b"), config),
+  Wheel("C", motor2.stepper1, board.A3, wheelSettings.get("c"), config),
+  Wheel("D", motor2.stepper2, board.A4, wheelSettings.get("d"), config),
+  Wheel("E", motor3.stepper1, board.A5, wheelSettings.get("e"), config)
 ]
+
+# initialize counter
+counter = Counter(config)
 
 # initialize LED
 status_light = neopixel.NeoPixel(board.NEOPIXEL, 1, brightness=0.2)
 
 ## START MAIN
-countdown = Countdown(wheels, config)
+countdown = Countdown(wheels, counter, config)
 
 # initialize network
 wsgiServer = None
@@ -45,12 +47,12 @@ wsgiServer = None
 if initializeNetwork:
   network = Server(secrets)
   network.ifconfig()
+  counter.playSound("startup")
 
   # initialize web console
   webConsole = WebConsole(countdown)
   server.set_interface(network.esp)
 
-  #webConsole.on("GET", "/calibrate", calibrate)
   webConsole.on("POST", "/command", webConsole.command)
 
   wsgiServer = server.WSGIServer(80, application=webConsole)

@@ -1,31 +1,27 @@
-import supervisor
-from random import randrange
-import re
-import time
-
 from analogio import AnalogIn
-import audioio
-import audiomp3
-import digitalio
-import audiocore
+from random import randrange
 
 import board
+import re
+import supervisor
+import time
 
-from .counter import Counter
 from .wheel import BLANK, CLOTH, SPIRAL, FEATHER, BIRD, STICK, HAND
 
-DEFAULT_COUNTDOWN_TIME = 6480
+VALENZETTI_EQUATION = "4 8 15 16 23 42"
 
 class Countdown:
 
-  def __init__(self, wheels, config):
+  def __init__(self, wheels, counter, config):
     print(">: INITIALIZING SWAN STATION COUNTDOWN SYSTEM")
 
     self.__wheels = wheels
     self.__config = config
-    self.__counter = Counter(self.__config.get("countdownSec", DEFAULT_COUNTDOWN_TIME), config)
+    self.__counter = counter
     self.__calibrationMode = self.__config.get("calibrateOnBoot", False)
     self.__enableNetwork = self.__config.get("network", False)
+
+    #supervisor.disable_autoreload()
 
   def prompt(self):
     print(">: ", end="")
@@ -102,7 +98,12 @@ class Countdown:
         r, o = wheel.parseCommand("CALIBRATE %s 10" % wheel.getName())
 
   def parseCommand(self, command):
-    if command == "STATUS":
+    if command == VALENZETTI_EQUATION:
+      self.__counter.reset()
+      self.setTimer()
+      return "CLEAR"
+
+    elif command == "STATUS":
       return self.status()
 
     elif command == "CALIBRATE":
@@ -167,6 +168,5 @@ class Countdown:
         self.underworld()
 
   def iterate(self):
-    self.__counter.iterate()
-    self.setTimer()
+    self.__counter.iterate(callback=self.setTimer())
     self.__counter.decrement()

@@ -1,4 +1,4 @@
-from lib.adafruit_motor.stepper import FORWARD
+from lib.adafruit_motor.stepper import FORWARD, SINGLE, DOUBLE, INTERLEAVE
 import math
 import re
 
@@ -30,10 +30,6 @@ MAN = const(17)
 BREAD = const(18)
 HAND = const(19)
 
-FORWARD = const(1)
-SINGLE = const(1)
-
-#GLYPH_MAP = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, BLANK, CLOTH, SPIRAL, FEATHER, BIRD, STICK, STAPLE, MAN, BREAD, HAND]
 GLYPH_MAP = [HAND, BREAD, MAN, STAPLE, STICK, BIRD, FEATHER, SPIRAL, CLOTH, BLANK, NINE, EIGHT, SEVEN, SIX, FIVE, FOUR, THREE, TWO, ONE, ZERO]
 
 class Wheel:
@@ -46,12 +42,14 @@ class Wheel:
   stepsPerArc = stepsPerRotation / totalArc          # should be 10
   arcStepsSmallGear = stepsPerArc * rotationsPerGear # should be 20
 
-  def __init__(self, name, stepper, pin, settings, mod, startAt=NINE, resetAt=HAND):
+  def __init__(self, name, stepper, pin, settings, config, startAt=NINE, resetAt=HAND):
     self.name = name
     self.stepper = stepper
     self.pin = pin
+    self.config = config
     self.settings = Settings.parse(settings)
-    self.mod = mod
+
+    self.enableDebug = self.config.get("debug", False)
 
     self.startAt = startAt
     self.resetAt = resetAt
@@ -98,22 +96,14 @@ class Wheel:
     self.step(times=Wheel.arcStepsSmallGear * Wheel.totalArc)
 
   def glyphStep(self):
-    self.step()
+    self.step(times=self.arcStepsSmallGear)
     nextGlyphIndex = (self.glyph - 1) % Wheel.totalArc
     self.glyph = nextGlyphIndex
     self.counter -= 1
 
-  def step(self, times=arcStepsSmallGear, direction=FORWARD, style=SINGLE):
-    for _ in range(times):
-      self.stepper.onestep()
-    self.stepper.release()
-    self.info()
-
-  def stepOrAdvance(self, timer):
-    if (timer % self.mod) > 0: return
-    if (self.glyph == self.resetAt): self.flip()
-
-    self.glyphStep()
+  def step(self, times=1, direction=FORWARD, style=SINGLE):
+    for _ in range(times):self.stepper.onestep()
+    if self.enableDebug: self.info()
 
   def info(self):
     info = "Wheel %s: {Glyph: %s, Voltage: %s, AtIndex: %s}" % (self.name, self.glyph, self._get_voltage(), self.at_index())
@@ -133,7 +123,7 @@ class Wheel:
     return distance
 
   def stepTo(self, glyph):
-    print("Setting %s to %s" % (self.getName(), glyph))
+    #print("Setting %s to %s" % (self.getName(), glyph))
     distance = self.distanceTo(glyph)
     self.step(times=distance * Wheel.arcStepsSmallGear)
     self.glyph = glyph

@@ -5,28 +5,32 @@ import digitalio
 
 from .wheel import BLANK, ZERO
 
+DEFAULT_COUNTDOWN_TIME = 6480
+
 WARNING = 240
 CRITICAL = 60
 FAILURE = 10
 
 class Counter:
 
-  def __init__(self, timer, config, critical=CRITICAL, failure=FAILURE, warning=WARNING):
+  def __init__(self, config, critical=CRITICAL, failure=FAILURE, warning=WARNING):
     self.config = config
-    self.timer = timer
+    self.timerStart = self.config.get("countdownSec", DEFAULT_COUNTDOWN_TIME)
+    self.timer = self.timerStart
     self.critical = critical
     self.failure = failure
     self.warning = warning
 
-    self.enableAudio = config.get("sound", False)
-    self.enableOutput = config.get("timerOutput", False)
+    self.enableAudio = self.config.get("sound", False)
+    self.enableOutput = self.config.get("timerOutput", False)
 
     self.audioLibrary = {
       "alarm": open("audio/swan-alarm.mp3", "rb"),
       "alarm-double": open("audio/swan-alarm-double.mp3", "rb"),
       "beep": open("audio/swan-beep.mp3", "rb"),
+      "failure": open("audio/swan-system-failure.mp3", "rb"),
       "lockdown": open("audio/swan-lockdown.mp3", "rb"),
-      "failure": open("audio/swan-system-failure.mp3", "rb")
+      "startup": open("audio/swan-startup.mp3", "rb")
     }
 
     self.mp3Decoder = audiomp3.MP3Decoder(self.audioLibrary["beep"])
@@ -35,9 +39,14 @@ class Counter:
     self.audio.direction = digitalio.Direction.OUTPUT
     self.audio.value = True
 
-  def iterate(self, func):
-    if self.enableOutput: print("TIMER: %s" % (self.timer))
-    self.evaluate_status(func)
+  def reset(self):
+    self.timer = self.config.get("countdownSec", DEFAULT_COUNTDOWN_TIME)
+
+  def iterate(self, callback):
+    if self.enableOutput:
+      minutes, seconds = self.getDigits()
+      print("  %s %s" % (minutes, seconds))
+    self.evaluate_status(callback)
 
 # At the 4 minute mark, a steady alarm beep signal/ed and continued for the next 3 minutes.
 # At the 1-minute mark, an intense alarm signalled and continued for the next 50 seconds.
@@ -47,26 +56,26 @@ class Counter:
 # The alarm signal was immediately replaced by a recorded voice repeating: "System Failure".
 # The sound of a power build-up was immediately heard, which led to the rest of the system failure effects.
 
-  def evaluate_status(self):
+  def evaluate_status(self, callback):
     if self.timer <= 0:
-      self.playSound("failure")
+      self.playSound("failure", callback)
       for _ in range(20): print("SYSTEM FAILURE ", end="")
       return False
 
     if self.timer <= self.failure:
-      self.playSound("alarm-double")
+      if (self.timer % 2 == 0): self.playSound("alarm-double", callback)
       print("SYSTEM CRITICAL")
 
     elif self.timer <= self.critical:
-      if (self.timer % 2): self.playSound("alarm")
+      if (self.timer % 2 == 0): self.playSound("alarm", callback)
       print("SYSTEM WARNING")
 
     elif self.timer <= self.warning:
-      if (self.timer % 4): self.playSound("beep")
+      if (self.timer % 4 == 0): self.playSound("beep", callback)
 
     return True
 
-  def playSound(self, filename, func=lambda: {}):
+  def playSound(self, filename, callback=lambda: {}):
     if (self.enableAudio):
       file = self.audioLibrary[filename]
       with audioio.AudioOut(board.A0) as audio:
@@ -74,8 +83,10 @@ class Counter:
         audio.play(self.mp3Decoder)
 
         while audio.playing:
-          func
+          callback
           pass
+    else:
+      callback
 
   def decrement(self):
     self.timer -= 1

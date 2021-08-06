@@ -1,3 +1,6 @@
 [submodule "static"]
 	path = static
 	url = git@github.com:rcreasey/swan-station-ui
+[submodule "contrib/tasko"]
+	path = contrib/tasko
+	url = https://github.com/WarriorOfWire/tasko.git
