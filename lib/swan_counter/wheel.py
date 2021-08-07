@@ -123,10 +123,12 @@ class Wheel:
     return distance
 
   def stepTo(self, glyph):
-    #print("Setting %s to %s" % (self.getName(), glyph))
     distance = self.distanceTo(glyph)
     self.step(times=distance * Wheel.arcStepsSmallGear)
     self.glyph = glyph
+
+  def release(self):
+    self.stepper.release()
 
   def parseCommand(self, data):
     # control commands

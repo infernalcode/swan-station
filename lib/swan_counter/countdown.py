@@ -1,6 +1,7 @@
 from analogio import AnalogIn
 from random import randrange
 
+# import atexit
 import board
 import re
 import supervisor
@@ -21,6 +22,7 @@ class Countdown:
     self.__calibrationMode = self.__config.get("calibrateOnBoot", False)
     self.__enableNetwork = self.__config.get("network", False)
 
+    #atexit.register(self.shutdown)
     #supervisor.disable_autoreload()
 
   def prompt(self):
@@ -42,7 +44,10 @@ class Countdown:
 
     while self.__calibrationMode:
       if self.__enableNetwork:
-        webConsole.update_poll()
+        try:
+          webConsole.update_poll()
+        except:
+          print("WSGI server update failed")
 
       if supervisor.runtime.serial_bytes_available:
         value = input().strip()
@@ -168,5 +173,8 @@ class Countdown:
         self.underworld()
 
   def iterate(self):
-    self.__counter.iterate(callback=self.setTimer())
-    self.__counter.decrement()
+    self.__counter.iterate(callback=self.setTimer)
+
+  def shutdown(self):
+    for wheel in self.__wheels:
+      wheel.release()

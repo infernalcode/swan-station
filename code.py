@@ -22,6 +22,7 @@ motor3 = MotorKit(i2c=board.I2C(), address=0x62)
 # read settings
 wheelSettings = config.get("wheels")
 initializeNetwork = config.get("network")
+enableStartupSound = config.get("startupSound")
 
 # initialize wheels
 wheels = [
@@ -47,7 +48,7 @@ wsgiServer = None
 if initializeNetwork:
   network = Server(secrets)
   network.ifconfig()
-  counter.playSound("startup")
+  if enableStartupSound: counter.playSound("startup")
 
   # initialize web console
   webConsole = WebConsole(countdown)
@@ -66,7 +67,10 @@ countdown.execute(wsgiServer)
 ## MAIN LOOP
 while True:
   if initializeNetwork:
-    wsgiServer.update_poll()
+    try:
+      wsgiServer.update_poll()
+    except:
+      print("WSGI server update failed")
 
   countdown.iterate()
 

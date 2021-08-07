@@ -42,11 +42,15 @@ class Counter:
   def reset(self):
     self.timer = self.config.get("countdownSec", DEFAULT_COUNTDOWN_TIME)
 
+  def decrement(self):
+    self.timer -= 1
+
   def iterate(self, callback):
     if self.enableOutput:
       minutes, seconds = self.getDigits()
       print("  %s %s" % (minutes, seconds))
     self.evaluate_status(callback)
+    self.decrement()
 
 # At the 4 minute mark, a steady alarm beep signal/ed and continued for the next 3 minutes.
 # At the 1-minute mark, an intense alarm signalled and continued for the next 50 seconds.
@@ -63,15 +67,27 @@ class Counter:
       return False
 
     if self.timer <= self.failure:
-      if (self.timer % 2 == 0): self.playSound("alarm-double", callback)
+      if (self.timer % 2 == 0):
+        self.playSound("alarm-double", callback)
+      else:
+        callback()
       print("SYSTEM CRITICAL")
 
     elif self.timer <= self.critical:
-      if (self.timer % 2 == 0): self.playSound("alarm", callback)
+      if (self.timer % 4 == 0):
+        self.playSound("alarm", callback)
+      else:
+        callback()
       print("SYSTEM WARNING")
 
     elif self.timer <= self.warning:
-      if (self.timer % 4 == 0): self.playSound("beep", callback)
+      if (self.timer % 4 == 0):
+        self.playSound("beep", callback)
+      else:
+        callback()
+
+    else:
+      callback()
 
     return True
 
@@ -83,13 +99,10 @@ class Counter:
         audio.play(self.mp3Decoder)
 
         while audio.playing:
-          callback
+          callback()
           pass
     else:
       callback
-
-  def decrement(self):
-    self.timer -= 1
 
   def getSeconds(self):
     return self.timer
