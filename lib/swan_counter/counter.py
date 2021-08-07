@@ -21,6 +21,8 @@ class Counter:
     self.failure = failure
     self.warning = warning
 
+    self.__running = True
+
     self.enableAudio = self.config.get("sound", False)
     self.enableOutput = self.config.get("timerOutput", False)
 
@@ -42,15 +44,29 @@ class Counter:
   def reset(self):
     self.timer = self.config.get("countdownSec", DEFAULT_COUNTDOWN_TIME)
 
+  def resetTimer(self, newTimer):
+    self.timer = int(newTimer)
+
   def decrement(self):
     self.timer -= 1
 
+  def halt(self):
+    self.__running = False
+
+  def resume(self):
+    self.__running = True
+
+  def getTimerValue(self):
+    minutes, seconds = self.getDigits()
+    return "  %s %s" % (minutes, seconds)
+
   def iterate(self, callback):
     if self.enableOutput:
-      minutes, seconds = self.getDigits()
-      print("  %s %s" % (minutes, seconds))
-    self.evaluate_status(callback)
-    self.decrement()
+      print(self.getTimerValue())
+
+    if self.__running:
+      self.evaluate_status(callback)
+      self.decrement()
 
 # At the 4 minute mark, a steady alarm beep signal/ed and continued for the next 3 minutes.
 # At the 1-minute mark, an intense alarm signalled and continued for the next 50 seconds.

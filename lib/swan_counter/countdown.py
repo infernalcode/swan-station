@@ -23,7 +23,7 @@ class Countdown:
     self.__enableNetwork = self.__config.get("network", False)
 
     #atexit.register(self.shutdown)
-    #supervisor.disable_autoreload()
+    supervisor.disable_autoreload()
 
   def prompt(self):
     print(">: ", end="")
@@ -115,7 +115,38 @@ class Countdown:
       return self.calibrateBlank()
 
     elif command == "UNDERWORLD":
-      return self.underworld()
+      return self.__counter.resetTimer(-10)
+
+    elif command == "TIMER":
+      return self.__counter.getTimerValue()
+
+    elif command == "PAUSE":
+      self.__counter.halt()
+      return "TIMER PAUSED"
+
+    elif command == "RESUME":
+      self.__counter.resume()
+      return "TIMER RESUMED"
+
+    elif command == "LOCKDOWN":
+      self.__counter.playSound("lockdown")
+      self.prompt()
+
+    elif re.match(r"^SET (\d+)", command):
+      cmd = re.compile(r"^SET (\d+)")
+      result = cmd.search(command)
+      self.__counter.resetTimer(result.group(1))
+
+    elif re.match(r"^CAL (\d+):(\d+):(\d+):(\d+):(\d+)", command):
+      cmd = re.compile(r"^CAL (\d+):(\d+):(\d+):(\d+):(\d+)")
+      result = cmd.search(command)
+      self.__wheels[0].parseCommand("CALIBRATE A %s" % result.group(5))
+      self.__wheels[1].parseCommand("CALIBRATE B %s" % result.group(4))
+      self.__wheels[2].parseCommand("CALIBRATE C %s" % result.group(3))
+      self.__wheels[3].parseCommand("CALIBRATE D %s" % result.group(2))
+      self.__wheels[4].parseCommand("CALIBRATE E %s" % result.group(1))
+      self.reset()
+      self.prompt()
 
     elif command == "SAVE":
       self.__calibrationMode = False
