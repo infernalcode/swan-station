@@ -10,6 +10,7 @@ import time
 from .wheel import BLANK, CLOTH, SPIRAL, FEATHER, BIRD, STICK, HAND
 
 VALENZETTI_EQUATION = "4 8 15 16 23 42"
+STATE_FILENAME = "counter.state"
 
 class Countdown:
 
@@ -103,7 +104,7 @@ class Countdown:
         r, o = wheel.parseCommand("CALIBRATE %s 10" % wheel.getName())
 
   def parseCommand(self, command):
-    if command == VALENZETTI_EQUATION:
+    if command == VALENZETTI_EQUATION and self.__counter.ableToBeReset():
       self.__counter.reset()
       self.setTimer()
       return "CLEAR"
@@ -166,9 +167,14 @@ class Countdown:
     status = ""
     for wheel in self.__wheels:
       status += wheel.info() + "\n"
-    print(" ")
-
     return status
+
+  def writeState(self):
+    digitsMinutes, digitsSeconds = self.__counter.getDigits()
+    state = "%s:%s:%s:%s:%s" % (digitsMinutes[2], digitsMinutes[1], digitsMinutes[0], digitsSeconds[1], digitsSeconds[0])
+    # If we had a writeable filesystem, we could write the state here.  Maybe push to MQTT broker?
+    #with open(STATE_FILENAME, "w") as f:
+    #  f.write(state)
 
   def monitorPins(self):
     # debug code
@@ -205,6 +211,8 @@ class Countdown:
 
   def iterate(self):
     self.__counter.iterate(callback=self.setTimer)
+    self.writeState()
+    time.sleep(1)
 
   def shutdown(self):
     for wheel in self.__wheels:

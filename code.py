@@ -73,5 +73,3 @@ while True:
       print("WSGI server update failed")
 
   countdown.iterate()
-
-  time.sleep(1)

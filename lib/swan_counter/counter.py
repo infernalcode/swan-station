@@ -27,8 +27,7 @@ class Counter:
     self.enableOutput = self.config.get("timerOutput", False)
 
     self.audioLibrary = {
-      "alarm": open("audio/swan-alarm.mp3", "rb"),
-      "alarm-double": open("audio/swan-alarm-double.mp3", "rb"),
+      "alert": open("audio/swan-alert.mp3", "rb"),
       "beep": open("audio/swan-beep.mp3", "rb"),
       "failure": open("audio/swan-system-failure.mp3", "rb"),
       "lockdown": open("audio/swan-lockdown.mp3", "rb"),
@@ -58,7 +57,7 @@ class Counter:
 
   def getTimerValue(self):
     minutes, seconds = self.getDigits()
-    return "  %s %s" % (minutes, seconds)
+    return "%s:%s:%s:%s:%s" % (minutes[0], minutes[1], minutes[2], seconds[0], seconds[1])
 
   def iterate(self, callback):
     if self.enableOutput:
@@ -83,15 +82,12 @@ class Counter:
       return False
 
     if self.timer <= self.failure:
-      if (self.timer % 2 == 0):
-        self.playSound("alarm-double", callback)
-      else:
-        callback()
+      self.playSound("alert", callback)
       print("SYSTEM CRITICAL")
 
     elif self.timer <= self.critical:
       if (self.timer % 4 == 0):
-        self.playSound("alarm", callback)
+        self.playSound("alert", callback)
       else:
         callback()
       print("SYSTEM WARNING")
@@ -119,6 +115,9 @@ class Counter:
           pass
     else:
       callback
+
+  def ableToBeReset(self):
+    return self.timer >= WARNING
 
   def getSeconds(self):
     return self.timer
